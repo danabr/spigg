@@ -1,0 +1,13 @@
+Spigg - side effect analysis of Erlang source code.
+
+Work in progress. Nothing useful here yet. Move on.
+
+# Design ideas
+{ok, DB} = spigg_db:load("test.spigg").
+{ok, []} = spigg:side_effects(DB, test, foo, 2).
+{ok, [send, receive, ref]} = spigg:side_effects(DB, test, bar, 0).
+{error, not_found} = spigg:side_effects(DB, other, module, 4).
+
+{ok, [ {local, "test.erl", 54} ] = spigg:origins(DB, test, bar, 0, receive).
+
+

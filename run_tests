@@ -1,0 +1,10 @@
+#!/usr/bin/env escript
+main(ErlFiles) ->
+  code:add_pathz("ebin"),
+  code:add_pathz("test/ebin"),
+  lists:foreach(fun(TestFile) ->
+    Module = list_to_atom(filename:basename(TestFile, ".erl")),
+    code:load_file(Module),
+    Module:test()
+  end, ErlFiles).
+  
