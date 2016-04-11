@@ -5,9 +5,8 @@
             , dependencies = #{} :: #{mfa() => ordsets:ordset(mfa())}
             }).
 
--record(function, { exported=erlang:error(missing_field) :: boolean()
-                  , native_side_effects = [] ::
-                      ordsets:ordset(spigg:side_effect())
+-record(function, { native_side_effects = [] ::
+                      ordsets:ordset(spigg:native_side_effect())
                   , calls = [] :: [spigg:call()]
                   }).
 

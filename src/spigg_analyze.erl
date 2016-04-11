@@ -43,15 +43,11 @@ analyze_local([], _ModData, Funs)                                         ->
   maps:from_list(Funs);
 analyze_local([{function, _Line, Name, Arity, Code}|Rest], ModData, Funs) ->
   {SideEffects, Calls} = analyze_function(Code, ModData, [], []),
-  F = #function { exported = is_exported(ModData, Name, Arity)
-                , calls = Calls
+  F = #function { calls = Calls
                 , native_side_effects = SideEffects
                 },
   MFA = {ModData#mod_data.name, Name, Arity},
   analyze_local(Rest, ModData, [{MFA, F}|Funs]).
-
-is_exported(#mod_data{exports=Exports, name=Mod}, Fun, Arity) ->
-  ordsets:is_element({Mod, Fun, Arity}, Exports).
 
 analyze_function([], _ModData, SideEffects, Calls) ->
   {SideEffects, Calls};

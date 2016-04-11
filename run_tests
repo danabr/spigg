@@ -5,6 +5,7 @@ main(ErlFiles) ->
   lists:foreach(fun(TestFile) ->
     Module = list_to_atom(filename:basename(TestFile, ".erl")),
     code:load_file(Module),
+    io:format("~p: ", [Module]),
     Module:test()
   end, ErlFiles).
   

@@ -1,11 +1,13 @@
 -module(spigg).
 
--export([ new_db/0
+-export([ add_function/4
+        , new_db/0
+        , side_effects/2
         ]).
 
 -include("spigg.hrl").
 
--opaque db() :: #db{}.
+-type db() :: #db{}.
 
 -type func() :: #function{}.
 
@@ -13,16 +15,66 @@
 
 -type call() :: {line(), mfa()}.
 
--type side_effect() :: {line(), spigg:side_effect_type()}.
+-type native_side_effect() :: {line(), spigg:side_effect_type()}.
+
+-type side_effect() :: {line(), local|mfa(), spigg:side_effect_type()}.
 
 -type side_effect_type() :: 'send'.
 
 -export_type([ db/0
              , func/0
              , call/0
+             , native_side_effect/0
              , side_effect/0
              , side_effect_type/0
              ]).
 
+-spec add_function(spigg:db(), mfa(), [spigg:call()],
+                   [spigg:native_side_effect()]) -> spigg:db().
+%% @doc Add function MFA to DB.
+%% TODO: If MFA already exists in DB, it will be replaced with the new information.
+add_function(#db{functions=Fns}=DB, MFA, Calls, SideEffects) ->
+  F = #function { calls = Calls
+                , native_side_effects=ordsets:from_list(SideEffects)
+                },
+  DB#db{functions=maps:put(MFA, F, Fns)}.
+
 -spec new_db() -> spigg:db().
+%% @doc Initialize a new side effect database.
 new_db() -> #db{}.
+
+-spec side_effects(spigg:db(), mfa()) -> {error, not_found} |
+                                         {ok, {Status, [spigg:side_effect()]}}
+  when Status :: complete | incomplete.
+%% @doc Lookup side effects of MFA.
+side_effects(#db{functions=Fns}, MFA) ->
+  case side_effects(Fns, MFA, complete, []) of
+    {incomplete, []}=Res        ->
+      case maps:is_key(MFA, Fns) of
+        false -> {error, not_found};
+        true  -> {ok, Res}
+      end;
+    {Completeness, SideEffects} ->
+      {ok, {Completeness, SideEffects}}
+  end.
+
+side_effects(Fns, MFA, Completeness, Seen) ->
+  case ordsets:is_element(MFA, Seen) of
+    true  -> {Completeness, []};
+    false ->
+      case maps:find(MFA, Fns) of
+        error                                               ->
+          {incomplete, []};
+        {ok, #function{calls=Calls, native_side_effects=S}} ->
+          SideEffects = lists:map(fun({Line, Effect}) -> {Line, local, Effect} end,
+                                  S),
+          Seen1 = ordsets:add_element(MFA, Seen),
+          lists:foldl(fun({Line, RMFA}, {C0, S0}) ->
+            {C1, S1} = side_effects(Fns, RMFA, C0, Seen1),
+            S2 = lists:foldl(fun({_, _, E}, SX) ->
+              ordsets:add_element({Line, RMFA, E}, SX)
+            end, S0, S1),
+            {C1, S2}
+          end, {complete, SideEffects}, Calls)
+      end
+  end.

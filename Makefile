@@ -17,7 +17,7 @@ clean:
 ebin/%.beam: src/%.erl src/*.hrl
 	erlc +debug_info -Werror -o ebin $<
 
-test/ebin/%.beam: test/%.erl
+test/ebin/%.beam: test/%.erl src/*.hrl
 	erlc +debug_info -Werror -I src/ -o test/ebin $<
 
 eunit: compile ${TEST_BEAMS}
