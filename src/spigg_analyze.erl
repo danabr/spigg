@@ -42,55 +42,55 @@ analyze_module([{function, _, _, _, _}=Function|Rest],
 analyze_local([], _ModData, Funs)                                         ->
   maps:from_list(Funs);
 analyze_local([{function, _Line, Name, Arity, Code}|Rest], ModData, Funs) ->
-  MFA = {ModData#mod_data.name, Name, Arity},
-  {SideEffects, Calls} = analyze_function(Code, MFA, ModData, [], []),
+  {SideEffects, Calls} = analyze_function(Code, ModData, [], []),
   F = #function { exported = is_exported(ModData, Name, Arity)
                 , calls = Calls
                 , native_side_effects = SideEffects
                 },
+  MFA = {ModData#mod_data.name, Name, Arity},
   analyze_local(Rest, ModData, [{MFA, F}|Funs]).
 
 is_exported(#mod_data{exports=Exports, name=Mod}, Fun, Arity) ->
   ordsets:is_element({Mod, Fun, Arity}, Exports).
 
-analyze_function([], _Id, _ModData, SideEffects, Calls) ->
+analyze_function([], _ModData, SideEffects, Calls) ->
   {SideEffects, Calls};
 analyze_function([{clause, _Line, _Args, _Guards, Code}|Clauses],
-                 Id, ModData, SideEffects0, Calls0)     ->
+                 ModData, SideEffects0, Calls0)    ->
   %% Guards are side effect free by design, so we disregard them completely.
-  {SideEffects, Calls} = analyze_code(Code, Id, ModData, SideEffects0, Calls0),
-  analyze_function(Clauses, Id, ModData, SideEffects, Calls).
+  {SideEffects, Calls} = analyze_code(Code, ModData, SideEffects0, Calls0),
+  analyze_function(Clauses, ModData, SideEffects, Calls).
 
-analyze_code([], _Id, _ModData, SideEffects, Calls)                          ->
+analyze_code([], _ModData, SideEffects, Calls)                           ->
   {SideEffects, Calls};
 analyze_code([ {call, Line, {remote, _, {atom, _, Mod}, {atom, _, Fun}}, Args}
-             | Code], Id, ModData, SideEffects, Calls)                       ->
+             | Code], ModData, SideEffects, Calls)                       ->
   % Fully qualified function call
   Call = {Line, {Mod, Fun, length(Args)}},
-  analyze_code(Code, Id, ModData, SideEffects, [Call|Calls]);
+  analyze_code(Args ++ Code, ModData, SideEffects, [Call|Calls]);
 analyze_code([{call, Line, {atom, _, Fun}, Args}|Code],
-             Id, ModData, SideEffects, Calls)                                ->
+             ModData, SideEffects, Calls)                                ->
   Arity = length(Args),
   Mod = identify_source_module(ModData, Fun, Arity),
   Call = {Line, {Mod, Fun, Arity}},
-  analyze_code(Code, Id, ModData, SideEffects, [Call|Calls]);
-analyze_code([{op, _, _Op, Expr}|Code], Id, ModData, SideEffects0, Calls0)   ->
-  {SideEffects, Calls} = analyze_code(listify(Expr), Id, ModData,
+  analyze_code(Args ++ Code, ModData, SideEffects, [Call|Calls]);
+analyze_code([{op, _, _Op, Expr}|Code], ModData, SideEffects0, Calls0)   ->
+  {SideEffects, Calls} = analyze_code(listify(Expr), ModData,
                                       SideEffects0, Calls0),
-  analyze_code(Code, Id, ModData, SideEffects, Calls);
+  analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{op, _, _Op, Lhs, Rhs}|Code],
-             Id, ModData, SideEffects0, Calls0)                              ->
-  {SideEffects1, Calls1} = analyze_code(listify(Lhs), Id, ModData,
+             ModData, SideEffects0, Calls0)                              ->
+  {SideEffects1, Calls1} = analyze_code(listify(Lhs), ModData,
                                         SideEffects0, Calls0),
-  {SideEffects2, Calls2} = analyze_code(listify(Rhs), Id, ModData,
+  {SideEffects2, Calls2} = analyze_code(listify(Rhs), ModData,
                                         SideEffects1, Calls1),
-  analyze_code(Code, Id, ModData, SideEffects2, Calls2);
-analyze_code([{atom, _Line, _Val}|Code], Id, ModData, SideEffects, Calls)    ->
-  analyze_code(Code, Id, ModData, SideEffects, Calls);
-analyze_code([{integer, _Line, _Val}|Code], Id, ModData, SideEffects, Calls) ->
-  analyze_code(Code, Id, ModData, SideEffects, Calls);
-analyze_code([{var, _Line, _}|Code], Id, ModData, SideEffects, Calls)        ->
-  analyze_code(Code, Id, ModData, SideEffects, Calls).
+  analyze_code(Code, ModData, SideEffects2, Calls2);
+analyze_code([{atom, _Line, _Val}|Code], ModData, SideEffects, Calls)    ->
+  analyze_code(Code, ModData, SideEffects, Calls);
+analyze_code([{integer, _Line, _Val}|Code], ModData, SideEffects, Calls) ->
+  analyze_code(Code, ModData, SideEffects, Calls);
+analyze_code([{var, _Line, _}|Code], ModData, SideEffects, Calls)        ->
+  analyze_code(Code, ModData, SideEffects, Calls).
 
 listify(Expressions) when is_list(Expressions) -> Expressions;
 listify(Expression)                            -> [Expression].
