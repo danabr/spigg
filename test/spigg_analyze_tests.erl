@@ -5,7 +5,7 @@
 
 analyze_minimal_test() ->
   Expected = #db { functions = #{}
-                 , modules = #{minimal => #module{}}
+                 , dependencies = #{}
                  },
   {ok, Forms} = load_fixture("test/fixtures/minimal.erl"),
   ?assertEqual({ok, Expected}, spigg_analyze:forms(Forms)).
@@ -13,34 +13,34 @@ analyze_minimal_test() ->
 analyze_pure_test() ->
   {ok, Forms} = load_fixture("test/fixtures/pure.erl"),
   {ok, DB} = spigg_analyze:forms(Forms),
-  assert_modules([pure], DB),
-  assert_dependencies([lists], DB, pure),
   assert_side_effects([], DB, pure, add, 2),
-  assert_unknowns([], DB, pure, add, 2),
+  assert_calls([], DB, pure, add, 2),
   assert_side_effects([], DB, pure, reverse, 1),
-  assert_unknowns([{lists, reverse, 1}], DB, pure, reverse, 1),
+  assert_calls([{lists, reverse, 1}], DB, pure, reverse, 1),
   assert_side_effects([], DB, pure, even, 1),
-  assert_unknowns([], DB, pure, even, 1),
+  assert_calls([{pure, odd, 1}], DB, pure, even, 1),
   assert_side_effects([], DB, pure, odd, 1),
-  assert_unknowns([], DB, pure, odd, 1),
-  assert_num_functions(4, DB).
+  assert_calls([{pure, even, 1}], DB, pure, odd, 1),
+  assert_side_effects([], DB, pure, sum, 1),
+  assert_calls([{pure, sum, 1}], DB, pure, sum, 1),
+  assert_num_functions(5, DB),
+  assert_dependencies(#{ {lists, reverse, 1} => [{pure,reverse, 1}]
+                       , {pure, even, 1}     => [{pure, odd, 1}]
+                       , {pure, odd, 1}      => [{pure, even, 1}]
+                       }, DB).
 
 %% Assert helpers
-assert_modules(Expected, #db{modules=Mods}) ->
-  ?assertEqual(lists:sort(Expected), lists:sort(maps:keys(Mods))).
-
-assert_dependencies(Expected, #db{modules=Mods}, Mod) ->
-  #module{dependencies=Actual} = maps:get(Mod, Mods),
-  ?assertEqual(ordsets:from_list(Expected), Actual).
+assert_dependencies(Expected, #db{dependencies=Actual}) ->
+  ?assertEqual(Expected, Actual).
 
 assert_side_effects(Expected, #db{functions=Funs}, M, F, A) ->
-  #function{side_effects=Effects} = maps:get({M, F, A}, Funs),
-  E = [{Type, Origin} || #side_effect{type=Type, origin=Origin} <- Effects],
+  #function{native_side_effects=Effects} = maps:get({M, F, A}, Funs),
+  E = [Type || {_Line, Type} <- Effects],
   ?assertEqual(lists:sort(Expected), lists:sort(E)).
 
-assert_unknowns(Expected, #db{functions=Funs}, M, F, A) ->
-  #function{unknowns=Unknowns} = maps:get({M, F, A}, Funs),
-  MFAs = [MFA || {_, MFA} <- Unknowns],
+assert_calls(Expected, #db{functions=Funs}, M, F, A) ->
+  #function{calls=Calls} = maps:get({M, F, A}, Funs),
+  MFAs = [MFA || {_, MFA} <- Calls],
   ?assertEqual(lists:sort(Expected), lists:sort(MFAs)).
 
 assert_num_functions(Expected, #db{functions=Funs}) ->

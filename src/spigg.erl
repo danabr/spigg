@@ -7,18 +7,19 @@
 
 -opaque db() :: #db{}.
 
--type mod() :: #module{}.
-
 -type func() :: #function{}.
 
--opaque side_effect() :: #side_effect{}.
+-type line() :: non_neg_integer().
+
+-type call() :: {line(), mfa()}.
+
+-type side_effect() :: {line(), spigg:side_effect_type()}.
 
 -type side_effect_type() :: 'send'.
 
-
 -export_type([ db/0
-             , mod/0
              , func/0
+             , call/0
              , side_effect/0
              , side_effect_type/0
              ]).
