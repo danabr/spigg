@@ -41,7 +41,7 @@ incomplete_side_effect_test() ->
   Calls = [{12, {bar, baz, 2}}],
   SideEffects = [{14, 'send'}],
   DB1 = spigg:add_function(DB0, MFA, Calls, SideEffects),
-  Expected = [{14, local, 'send'}], 
+  Expected = [{14, local, 'send'}],
   ?assertEqual({ok, {incomplete, Expected}}, spigg:side_effects(DB1, MFA)).
 
 two_level_side_effect_test() ->
@@ -66,7 +66,7 @@ three_level_side_effect_test() ->
   DB3 = spigg:add_function(DB2, DeepMFA, [], [{4, 'time'}]),
   Expected = [ {12, RemoteMFA, 'receive'}
              , {12, RemoteMFA, 'time'}
-             , {14, local, 'send'}  
+             , {14, local, 'send'}
              ],
   ?assertEqual({ok, {complete, Expected}}, spigg:side_effects(DB3, MFA)).
 
@@ -104,3 +104,31 @@ multiple_deep_calls_side_effect_test() ->
                                , {3, Caller, time}
                                ]}},
                spigg:side_effects(DB3, Top)).
+
+merge_empty_test() ->
+  DB = spigg:new_db(),
+  ?assertEqual(DB, spigg:merge(DB, DB)).
+
+merge_self_test() ->
+  DB0 = spigg:new_db(),
+  DB1 = spigg:add_function(DB0, {m, f, 1}, [], []),
+  ?assertEqual(DB1, spigg:merge(DB1, DB1)),
+  ?assertEqual(DB1, spigg:merge(DB0, DB1)),
+  ?assertEqual(DB1, spigg:merge(DB1, DB0)).
+
+merge_different_test() ->
+  DB0 = spigg:new_db(),
+  DBA = spigg:add_function(DB0, {foo, bar, 1}, [], []),
+  DBB = spigg:add_function(DB0, {bar, baz, 2}, [], []),
+  DBAB = spigg:add_function(DBA, {bar, baz, 2}, [], []),
+  ?assertEqual(DBAB, spigg:merge(DBA, DBB)),
+  ?assertEqual(DBAB, spigg:merge(DBB, DBA)).
+
+merge_conflict_test() ->
+  DB0 = spigg:new_db(),
+  DBA = spigg:add_function(DB0, {foo, bar, 1}, [], []),
+  DBB = spigg:add_function(DB0, {foo, bar, 1}, [{bar, baz, 2}], []),
+  DBAB = spigg:add_function(DBA, {foo, bar, 1}, [], []),
+  DBBA = spigg:add_function(DBA, {foo, bar, 1}, [{bar, baz, 2}], []),
+  ?assertEqual(DBBA, spigg:merge(DBA, DBB)),
+  ?assertEqual(DBAB, spigg:merge(DBB, DBA)).

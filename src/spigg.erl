@@ -1,6 +1,7 @@
 -module(spigg).
 
 -export([ add_function/4
+        , merge/2
         , new_db/0
         , side_effects/2
         ]).
@@ -38,6 +39,10 @@ add_function(#db{functions=Fns}=DB, MFA, Calls, SideEffects) ->
                 , native_side_effects=ordsets:from_list(SideEffects)
                 },
   DB#db{functions=maps:put(MFA, F, Fns)}.
+
+-spec merge(Base::spigg:db(), Override::spigg:db()) -> spigg:db().
+merge(#db{functions=Old}, #db{functions=New}) ->
+  #db{functions=maps:merge(Old, New)}.
 
 -spec new_db() -> spigg:db().
 %% @doc Initialize a new side effect database.
