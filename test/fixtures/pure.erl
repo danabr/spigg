@@ -1,5 +1,7 @@
 -module(pure).
 
+-compile([export_all]).
+
 add(A, B) when is_integer(A), is_integer(B) ->
   A + B.
 

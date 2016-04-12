@@ -3,16 +3,18 @@
 -include("spigg.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+analyze_not_found_test() ->
+  ?assertEqual({error, not_found}, spigg_analyze:beam("not_found")).
+
 analyze_minimal_test() ->
   Expected = #db { functions = #{}
                  , dependencies = #{}
                  },
-  {ok, Forms} = load_fixture("test/fixtures/minimal.erl"),
-  ?assertEqual({ok, Expected}, spigg_analyze:forms(Forms)).
+  Fixture = "test/ebin/minimal.beam",
+  ?assertEqual({ok, Expected}, spigg_analyze:beam(Fixture)).
 
 analyze_pure_test() ->
-  {ok, Forms} = load_fixture("test/fixtures/pure.erl"),
-  {ok, DB} = spigg_analyze:forms(Forms),
+  {ok, DB} = spigg_analyze:beam("test/ebin/pure.beam"),
   assert_side_effects([], DB, pure, add, 2),
   assert_calls([], DB, pure, add, 2),
   assert_side_effects([], DB, pure, reverse, 1),
@@ -45,23 +47,3 @@ assert_calls(Expected, #db{functions=Funs}, M, F, A) ->
 
 assert_num_functions(Expected, #db{functions=Funs}) ->
   ?assertEqual(Expected, maps:size(Funs)).
-
-%% Test helpers
-load_fixture(File) ->
-  {ok, Fixture} = file:read_file(File),
-  parse(erl_scan:tokens([], binary_to_list(Fixture), 1)).
-
-parse(ScanRes) ->
-  parse(ScanRes, []).
-
-parse([], Forms)                    -> {ok, lists:reverse(Forms)};
-parse(Str, Forms) when is_list(Str) ->
-  parse(erl_scan:tokens([], Str, 1), Forms);
-parse({done, Res, Rest}, Forms)     ->
-  parse_done(Res, Rest, Forms).
-
-parse_done({ok, Tokens, _Location}, Rest, Forms) ->
-  case erl_parse:parse_form(Tokens) of
-    {ok, Form} -> parse(Rest, [Form|Forms]);
-    Err        -> Err
-  end.

@@ -1,6 +1,8 @@
 -module(spigg_analyze).
 
--export([forms/1]).
+-export([ beam/1
+        , forms/1
+        ]).
 
 -include("spigg.hrl").
 
@@ -20,7 +22,17 @@
                   , raw_functions = [] :: [erl_parse:abstract_form()]
                   }).
 
--spec forms([erl_parse:abstract_form()]) -> {ok, #db{}}.
+-spec beam(Path::string()) -> {ok, spigg:db()} |
+                              {error, not_found}.
+beam(Path) when is_list(Path) ->
+  case beam_lib:chunks(Path, [abstract_code]) of
+    {ok, {_Mod, [{abstract_code, {raw_abstract_v1, Code}}]}} ->
+      forms(Code);
+    {error, beam_lib, {file_error, _Path, enoent}}           ->
+      {error, not_found}
+  end.
+
+-spec forms([erl_parse:abstract_form()]) -> {ok, spigg:db()}.
 forms(Forms) when is_list(Forms) ->
   ModData = analyze_module(Forms),
   RawFunctions = ModData#mod_data.raw_functions,
@@ -31,12 +43,16 @@ forms(Forms) when is_list(Forms) ->
 analyze_module(Forms) ->
   analyze_module(Forms, #mod_data{}).
 
-analyze_module([], ModData)                                -> ModData;
+analyze_module([], ModData)                                      -> ModData;
 analyze_module([{attribute, _Line, module, ModName}|Rest],
-               #mod_data{name=undefined}=ModData)          ->
+               #mod_data{name=undefined}=ModData)                ->
   analyze_module(Rest, ModData#mod_data{name=ModName});
+analyze_module([{attribute, _Line, _Key, _Value}|Rest], ModData) ->
+  analyze_module(Rest, ModData);
+analyze_module([{eof, _Line}|Rest], ModData)                     ->
+  analyze_module(Rest, ModData);
 analyze_module([{function, _, _, _, _}=Function|Rest],
-               #mod_data{raw_functions=Functions}=ModData) ->
+               #mod_data{raw_functions=Functions}=ModData)       ->
   analyze_module(Rest, ModData#mod_data{raw_functions=[Function|Functions]}).
 
 analyze_local([], _ModData, Funs)                                         ->
