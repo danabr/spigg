@@ -31,6 +31,13 @@ analyze_pure_test() ->
                        , {pure, odd, 1}      => [{pure, even, 1}]
                        }, DB).
 
+analyze_self_test() ->
+  TestF = fun(Beam, ok) ->
+    ?debugFmt("analyze_self_test: ~p", [Beam]),
+    ?assertMatch({ok, _}, spigg_analyze:beam(Beam))
+  end,
+  filelib:fold_files("ebin", ".beam", false, TestF, ok).
+
 %% Assert helpers
 assert_dependencies(Expected, #db{dependencies=Actual}) ->
   ?assertEqual(Expected, Actual).
