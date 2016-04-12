@@ -7,9 +7,7 @@ analyze_not_found_test() ->
   ?assertEqual({error, not_found}, spigg_analyze:beam("not_found")).
 
 analyze_minimal_test() ->
-  Expected = #db { functions = #{}
-                 , dependencies = #{}
-                 },
+  Expected = #db { functions = #{} },
   Fixture = "test/ebin/minimal.beam",
   ?assertEqual({ok, Expected}, spigg_analyze:beam(Fixture)).
 
@@ -25,11 +23,7 @@ analyze_pure_test() ->
   assert_calls([{pure, even, 1}], DB, pure, odd, 1),
   assert_side_effects([], DB, pure, sum, 1),
   assert_calls([{pure, sum, 1}], DB, pure, sum, 1),
-  assert_num_functions(5, DB),
-  assert_dependencies(#{ {lists, reverse, 1} => [{pure,reverse, 1}]
-                       , {pure, even, 1}     => [{pure, odd, 1}]
-                       , {pure, odd, 1}      => [{pure, even, 1}]
-                       }, DB).
+  assert_num_functions(5, DB).
 
 analyze_self_test() ->
   TestF = fun(Beam, ok) ->
@@ -39,9 +33,6 @@ analyze_self_test() ->
   filelib:fold_files("ebin", ".beam", false, TestF, ok).
 
 %% Assert helpers
-assert_dependencies(Expected, #db{dependencies=Actual}) ->
-  ?assertEqual(Expected, Actual).
-
 assert_side_effects(Expected, #db{functions=Funs}, M, F, A) ->
   #function{native_side_effects=Effects} = maps:get({M, F, A}, Funs),
   E = [Type || {_Line, Type} <- Effects],

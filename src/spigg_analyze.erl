@@ -43,8 +43,7 @@ forms(Forms) when is_list(Forms) ->
   ModData = analyze_module(Forms),
   RawFunctions = ModData#mod_data.raw_functions,
   Functions = analyze_local(RawFunctions, ModData, []),
-  Dependencies = dependencies(Functions),
-  {ok, #db{functions = Functions, dependencies = Dependencies}}.
+  {ok, #db{functions = Functions}}.
 
 analyze_module(Forms) ->
   analyze_module(Forms, #mod_data{}).
@@ -153,20 +152,3 @@ identify_source_module(#mod_data{name=Name, raw_functions=Raw}, Fun, Arity) ->
     true  -> Name;
     false -> erlang % TODO: Check imports
   end.
-
-dependencies(Funs) ->
-  maps:fold(fun add_dependencies/3, #{}, Funs).
-
-add_dependencies(Source, #function{calls=Calls}, Deps0) ->
-  lists:foldl(fun({_Line, MFA}, Deps) when Source =/= MFA ->
-                add_dependency(Source, MFA, Deps);
-                 ({_Line, _Source}, Deps)                 -> % recursion
-                Deps
-              end, Deps0, Calls).
-
-add_dependency(Source, MFA, Deps) ->
-  MFADeps = case maps:find(MFA, Deps) of
-    {ok, Existing} -> ordsets:add_element(Source, Existing);
-    error          -> [Source]
-  end,
-  maps:put(MFA, MFADeps, Deps).

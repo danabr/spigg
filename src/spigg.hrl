@@ -2,7 +2,6 @@
 -define(__SPIGG_HRL, true).
 
 -record(db, { functions = #{} :: #{mfa() => spigg:func()}
-            , dependencies = #{} :: #{mfa() => ordsets:ordset(mfa())}
             }).
 
 -record(function, { native_side_effects = [] ::
