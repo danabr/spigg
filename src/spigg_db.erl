@@ -1,1 +1,0 @@
--module(spigg_db).
