@@ -23,7 +23,9 @@ analyze_pure_test() ->
   assert_calls([{pure, even, 1}], DB, pure, odd, 1),
   assert_side_effects([], DB, pure, sum, 1),
   assert_calls([{pure, sum, 1}], DB, pure, sum, 1),
-  assert_num_functions(5, DB).
+  assert_side_effects([], DB, pure, exists, 2),
+  assert_calls([{lists, any, 2}], DB, pure, exists, 2),
+  assert_num_functions(6, DB).
 
 analyze_self_test() ->
   TestF = fun(Beam, ok) ->

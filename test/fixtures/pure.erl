@@ -1,5 +1,7 @@
 -module(pure).
 
+-import(lists, [any/2]).
+
 -compile([export_all]).
 
 add(A, B) when is_integer(A), is_integer(B) ->
@@ -16,3 +18,6 @@ odd(N) when N > 0 -> not even(N-1).
 
 sum([])       -> 0;
 sum([X|Rest]) -> X + sum(Rest).
+
+exists(P, L) when is_function(P, 1), is_list(L) ->
+  any(P, L).

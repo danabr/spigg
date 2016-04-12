@@ -23,7 +23,7 @@
 %% A: Dodge the question for now.
 
 -record(mod_data, { name = undefined :: module()
-                  , imports = ordsets:new() :: ordsets:ordset(mfa())
+                  , imports = #{} :: #{{atom(), arity()} => module()}
                   , exports = ordsets:new() :: ordsets:ordset(mfa())
                   , raw_functions = [] :: [erl_parse:abstract_form()]
                   }).
@@ -52,6 +52,11 @@ analyze_module([], ModData)                                      -> ModData;
 analyze_module([{attribute, _Line, module, ModName}|Rest],
                #mod_data{name=undefined}=ModData)                ->
   analyze_module(Rest, ModData#mod_data{name=ModName});
+analyze_module([{attribute, _Line, import, {Mod, FAs}}|Rest],
+               #mod_data{imports=OldImports}=ModData)               ->
+  NewImports = maps:from_list([{FA, Mod} || FA <- FAs]),
+  Imports = maps:merge(OldImports, NewImports),
+  analyze_module(Rest, ModData#mod_data{imports=Imports});
 analyze_module([{attribute, _Line, _Key, _Value}|Rest], ModData) ->
   analyze_module(Rest, ModData);
 analyze_module([{eof, _Line}|Rest], ModData)                     ->
@@ -70,85 +75,95 @@ analyze_local([{function, _Line, Name, Arity, Code}|Rest], ModData, Funs) ->
   MFA = {ModData#mod_data.name, Name, Arity},
   analyze_local(Rest, ModData, [{MFA, F}|Funs]).
 
-analyze_code([], _ModData, SideEffects, Calls)                              ->
+analyze_code([], _ModData, SideEffects, Calls)                                ->
   {SideEffects, Calls};
-analyze_code([{atom, _Line, _Val}|Code], ModData, SideEffects, Calls)       ->
+analyze_code([{atom, _Line, _Val}|Code], ModData, SideEffects, Calls)         ->
   analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([ {call, Line, {remote, _, {atom, _, Mod}, {atom, _, Fun}}, Args}
-             | Code], ModData, SideEffects, Calls)                          ->
+             | Code], ModData, SideEffects, Calls)                            ->
   % Fully qualified function call
   Call = {Line, {Mod, Fun, length(Args)}},
   analyze_code(Args ++ Code, ModData, SideEffects, [Call|Calls]);
 analyze_code([{call, Line, {atom, _, Fun}, Args}|Code],
-             ModData, SideEffects, Calls)                                   ->
+             ModData, SideEffects, Calls)                                     ->
   Arity = length(Args),
   Mod = identify_source_module(ModData, Fun, Arity),
   Call = {Line, {Mod, Fun, Arity}},
   analyze_code(Args ++ Code, ModData, SideEffects, [Call|Calls]);
 analyze_code([{'case', _Line, Expr, Clauses}|Code],
-             ModData, SideEffects, Calls)                                   ->
+             ModData, SideEffects, Calls)                                     ->
   analyze_code([Expr|Clauses] ++ Code, ModData, SideEffects, Calls);
 analyze_code([{clause, _Line, _Args, _Guards, Code}|Clauses],
-             ModData, SideEffects, Calls)                                   ->
+             ModData, SideEffects, Calls)                                     ->
   %% Guards are side effect free by design, so we disregard them completely.
   analyze_code(Code ++ Clauses, ModData, SideEffects, Calls);
 analyze_code([{cons, _Line, HeadExpr, TailExpr}|Code],
-             ModData, SideEffects, Calls)                                   ->
+             ModData, SideEffects, Calls)                                     ->
   analyze_code([HeadExpr, TailExpr|Code], ModData, SideEffects, Calls);
 %% Note: a fun is only part of the enclosing function if
 %% is called from the function. We can't reliably tell if
 %% that happens with the local view we have.
 analyze_code([{'fun', _Line, {clauses, _Clauses}}|Code],
-             ModData, SideEffects, Calls)                                   ->
+             ModData, SideEffects, Calls)                                     ->
   analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{'fun', _Line, {function, _F, _A}}|Code],
-             ModData, SideEffects, Calls)                                   ->
+             ModData, SideEffects, Calls)                                     ->
   analyze_code(Code, ModData, SideEffects, Calls);
-analyze_code([{integer, _Line, _Val}|Code], ModData, SideEffects, Calls)    ->
+analyze_code([{integer, _Line, _Val}|Code], ModData, SideEffects, Calls)      ->
   analyze_code(Code, ModData, SideEffects, Calls);
-analyze_code([{map, _Line, Elements}|Code], ModData, SideEffects, Calls)    ->
+analyze_code([{generate, _Line, Lhs, Rhs}|Code], ModData, SideEffects, Calls) ->
+  analyze_code([Lhs, Rhs|Code], ModData, SideEffects, Calls);
+analyze_code([{lc, _Line, Lhs, Generators}|Code],
+             ModData, SideEffects, Calls)                                     ->
+  analyze_code([Lhs|Generators] ++ Code, ModData, SideEffects, Calls);
+analyze_code([{map, _Line, Elements}|Code], ModData, SideEffects, Calls)      ->
   analyze_code(Elements ++ Code, ModData, SideEffects, Calls);
-analyze_code([{match, _Line, _Lhs, Rhs}|Code], ModData, SideEffects, Calls) ->
+analyze_code([{match, _Line, _Lhs, Rhs}|Code], ModData, SideEffects, Calls)   ->
   analyze_code([Rhs|Code], ModData, SideEffects, Calls);
-analyze_code([{nil, _Line}|Code], ModData, SideEffects, Calls)              ->
+analyze_code([{nil, _Line}|Code], ModData, SideEffects, Calls)                ->
   analyze_code(Code, ModData, SideEffects, Calls);
-analyze_code([{op, _, _Op, Expr}|Code], ModData, SideEffects0, Calls0)      ->
+analyze_code([{op, _, _Op, Expr}|Code], ModData, SideEffects0, Calls0)        ->
   {SideEffects, Calls} = analyze_code(listify(Expr), ModData,
                                       SideEffects0, Calls0),
   analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{op, _, _Op, Lhs, Rhs}|Code],
-             ModData, SideEffects0, Calls0)                                 ->
+             ModData, SideEffects0, Calls0)                                   ->
   {SideEffects1, Calls1} = analyze_code(listify(Lhs), ModData,
                                         SideEffects0, Calls0),
   {SideEffects2, Calls2} = analyze_code(listify(Rhs), ModData,
                                         SideEffects1, Calls1),
   analyze_code(Code, ModData, SideEffects2, Calls2);
 analyze_code([{record, _Line, {var, _, _Var}, _Name, Fields}|Code],
-             ModData, SideEffects, Calls)                                  ->
+             ModData, SideEffects, Calls)                                     ->
   analyze_code(Fields++Code, ModData, SideEffects, Calls);
 analyze_code([{record, _Line, _Name, Fields}|Code],
-             ModData, SideEffects, Calls)                                  ->
+             ModData, SideEffects, Calls)                                     ->
   analyze_code(Fields++Code, ModData, SideEffects, Calls);
 analyze_code([{record_field, _Line, {atom, _Line, _Field}, Rhs}|Code],
-             ModData, SideEffects, Calls)                                  ->
+             ModData, SideEffects, Calls)                                     ->
   analyze_code([Rhs|Code], ModData, SideEffects, Calls);
 analyze_code([{record_field, _Line, {var, _Line, _Var},
               _Record, {atom, _Line, _Field}}|Code],
-             ModData, SideEffects, Calls)                                  ->
+             ModData, SideEffects, Calls)                                     ->
   analyze_code(Code, ModData, SideEffects, Calls);
-analyze_code([{tuple, _Line, Elements}|Code], ModData, SideEffects, Calls) ->
+analyze_code([{tuple, _Line, Elements}|Code], ModData, SideEffects, Calls)    ->
   analyze_code(Elements++Code, ModData, SideEffects, Calls);
-analyze_code([{var, _Line, _}|Code], ModData, SideEffects, Calls)          ->
+analyze_code([{var, _Line, _}|Code], ModData, SideEffects, Calls)             ->
   analyze_code(Code, ModData, SideEffects, Calls).
 
 listify(Expressions) when is_list(Expressions) -> Expressions;
 listify(Expression)                            -> [Expression].
 
-identify_source_module(#mod_data{name=Name, raw_functions=Raw}, Fun, Arity) ->
+identify_source_module(#mod_data{name=Name, raw_functions=Raw,
+                                 imports=Imports}, Fun, Arity) ->
   IsLocalF = fun({function, _Line, F, A, _Code})   ->
                 F =:= Fun andalso A =:= Arity
              end,
   case lists:any(IsLocalF, Raw) of
     true  -> Name;
-    false -> erlang % TODO: Check imports
+    false ->
+      case maps:find({Fun, Arity}, Imports) of
+        {ok, Mod} -> Mod;
+        error     -> erlang
+      end
   end.
