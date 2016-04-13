@@ -27,4 +27,7 @@ complex(F, Arg) ->
   if 
     Res > 1 -> large;
     true    -> small
+  end,
+  case Arg of
+    "string" -> "string"
   end.
