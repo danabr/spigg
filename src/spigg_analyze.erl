@@ -96,6 +96,8 @@ analyze_code([{call, _Line, {var, _, _Var}, Args}|Code],
 analyze_code([{'case', _Line, Expr, Clauses}|Code],
              ModData, SideEffects, Calls)                                     ->
   analyze_code([Expr|Clauses] ++ Code, ModData, SideEffects, Calls);
+analyze_code([{'catch', _Line, Expr}|Code], ModData, SideEffects, Calls)      ->
+  analyze_code([Expr|Code], ModData, SideEffects, Calls);
 analyze_code([{clause, _Line, _Args, _Guards, Code}|Clauses],
              ModData, SideEffects, Calls)                                     ->
   %% Guards are side effect free by design, so we disregard them completely.

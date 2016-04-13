@@ -23,7 +23,7 @@ exists(P, L) when is_function(P, 1), is_list(L) ->
   any(P, L).
 
 complex(F, Arg) ->
-  Res = F(Arg),
+  Res = (catch F(Arg)),
   if 
     Res > 1 -> large;
     true    -> small
