@@ -49,37 +49,37 @@ merge(#db{functions=Old}, #db{functions=New}) ->
 new_db() -> #db{}.
 
 -spec side_effects(spigg:db(), mfa()) -> {error, not_found} |
-                                         {ok, {Status, [spigg:side_effect()]}}
-  when Status :: complete | incomplete.
+                                         {ok, {Status, Unknowns}}
+  when Status :: complete | incomplete,
+       Unknowns :: ordsets:ordset(mfa()).
 %% @doc Lookup side effects of MFA.
 side_effects(#db{functions=Fns}, MFA) ->
-  case side_effects(Fns, MFA, complete, []) of
-    {incomplete, []}=Res        ->
+  case side_effects(Fns, MFA, [], []) of
+    {[], _}=Res        ->
       case maps:is_key(MFA, Fns) of
         false -> {error, not_found};
         true  -> {ok, Res}
       end;
-    {Completeness, SideEffects} ->
-      {ok, {Completeness, SideEffects}}
+    {_, _}=Res -> {ok, Res}
   end.
 
-side_effects(Fns, MFA, Completeness, Seen) ->
+side_effects(Fns, MFA, Unknowns, Seen) ->
   case ordsets:is_element(MFA, Seen) of
-    true  -> {Completeness, []};
+    true  -> {[], Unknowns};
     false ->
       case maps:find(MFA, Fns) of
         error                                               ->
-          {incomplete, []};
+          {[], ordsets:add_element(MFA, Unknowns)};
         {ok, #function{calls=Calls, native_side_effects=S}} ->
           SideEffects = lists:map(fun({Line, Effect}) -> {Line, local, Effect} end,
                                   S),
           Seen1 = ordsets:add_element(MFA, Seen),
-          lists:foldl(fun({Line, RMFA}, {C0, S0}) ->
-            {C1, S1} = side_effects(Fns, RMFA, C0, Seen1),
+          lists:foldl(fun({Line, RMFA}, {S0, U0}) ->
+            {S1, U1} = side_effects(Fns, RMFA, U0, Seen1),
             S2 = lists:foldl(fun({_, _, E}, SX) ->
               ordsets:add_element({Line, RMFA, E}, SX)
             end, S0, S1),
-            {C1, S2}
-          end, {complete, SideEffects}, Calls)
+            {S2, U1}
+          end, {SideEffects, Unknowns}, Calls)
       end
   end.
