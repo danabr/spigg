@@ -21,3 +21,5 @@ sum([X|Rest]) -> X + sum(Rest).
 
 exists(P, L) when is_function(P, 1), is_list(L) ->
   any(P, L).
+
+call_fun(F, Arg) -> F(Arg).

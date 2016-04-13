@@ -90,6 +90,9 @@ analyze_code([{call, Line, {atom, _, Fun}, Args}|Code],
   Mod = identify_source_module(ModData, Fun, Arity),
   Call = {Line, {Mod, Fun, Arity}},
   analyze_code(Args ++ Code, ModData, SideEffects, [Call|Calls]);
+analyze_code([{call, _Line, {var, _, _Var}, Args}|Code],
+             ModData, SideEffects, Calls)                                     ->
+  analyze_code(Args ++ Code, ModData, SideEffects, Calls);
 analyze_code([{'case', _Line, Expr, Clauses}|Code],
              ModData, SideEffects, Calls)                                     ->
   analyze_code([Expr|Clauses] ++ Code, ModData, SideEffects, Calls);
