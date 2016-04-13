@@ -159,6 +159,10 @@ analyze_code([{record_field, _Line, {var, _Line, _Var},
   analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{string, _Line, _String}|Code], ModData, SideEffects, Calls)    ->
   analyze_code(Code, ModData, SideEffects, Calls);
+analyze_code([{'try', _Line, Exprs, MatchClauses, ErrorClauses, After}|Code],
+             ModData, SideEffects, Calls)                                     ->
+  analyze_code(lists:append([Exprs, MatchClauses,ErrorClauses, After, Code]),
+               ModData, SideEffects, Calls);
 analyze_code([{tuple, _Line, Elements}|Code], ModData, SideEffects, Calls)    ->
   analyze_code(Elements++Code, ModData, SideEffects, Calls);
 analyze_code([{var, _Line, _}|Code], ModData, SideEffects, Calls)             ->
