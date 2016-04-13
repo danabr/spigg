@@ -79,6 +79,10 @@ analyze_code([], _ModData, SideEffects, Calls)                                ->
   {SideEffects, Calls};
 analyze_code([{atom, _Line, _Val}|Code], ModData, SideEffects, Calls)         ->
   analyze_code(Code, ModData, SideEffects, Calls);
+analyze_code([ {call, _Line, {remote, _, {var, _, _Mod}, {_, _, _Fun}}, Args}
+             | Code], ModData, SideEffects, Calls)                            ->
+  % Dynamic call (TODO: Mark functions that make dynamic calls )
+  analyze_code(Args ++ Code, ModData, SideEffects, Calls);
 analyze_code([ {call, Line, {remote, _, {atom, _, Mod}, {atom, _, Fun}}, Args}
              | Code], ModData, SideEffects, Calls)                            ->
   % Fully qualified function call

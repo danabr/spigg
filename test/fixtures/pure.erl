@@ -24,6 +24,7 @@ exists(P, L) when is_function(P, 1), is_list(L) ->
 
 complex(F, Arg) ->
   Res = (catch F(Arg)),
+  Arg:dynamic(),
   if 
     Res > 1 -> large;
     true    -> small
