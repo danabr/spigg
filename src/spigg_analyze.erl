@@ -79,6 +79,8 @@ analyze_code([], _ModData, SideEffects, Calls)                                ->
   {SideEffects, Calls};
 analyze_code([{atom, _Line, _Val}|Code], ModData, SideEffects, Calls)         ->
   analyze_code(Code, ModData, SideEffects, Calls);
+analyze_code([{bin, _Line, _Val}|Code], ModData, SideEffects, Calls)          ->
+  analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{block, _Line, SubCode}|Code], ModData, SideEffects, Calls)     ->
   analyze_code(SubCode ++ Code, ModData, SideEffects, Calls);
 analyze_code([{call, _Line, {'fun', _Line, {clauses, Clauses}}, Args}|Code],

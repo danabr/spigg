@@ -37,6 +37,8 @@ complex(F, Arg) ->
     true    -> small
   end,
   Res = case Arg of
-    "string" -> "string"
+    "string" -> "string";
+    <<>>     -> <<>>;
+    <<1,2,3>> -> <<"123">>
   end,
   Res = begin 1 + 2 end.
