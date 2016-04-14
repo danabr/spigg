@@ -152,6 +152,15 @@ analyze_code([{lc, _Line, Lhs, Generators}|Code],
   analyze_code([Lhs|Generators] ++ Code, ModData, SideEffects, Calls);
 analyze_code([{map, _Line, Elements}|Code], ModData, SideEffects, Calls)      ->
   analyze_code(Elements ++ Code, ModData, SideEffects, Calls);
+analyze_code([{map, _Line, MapExpr, KeyExprs}|Code],
+              ModData, SideEffects, Calls)      ->
+  analyze_code([MapExpr|KeyExprs] ++ Code, ModData, SideEffects, Calls);
+analyze_code([{map_field_assoc, _Line, Lhs, Rhs}|Code],
+             ModData, SideEffects, Calls)                                     ->
+  analyze_code([Lhs, Rhs|Code], ModData, SideEffects, Calls);
+analyze_code([{map_field_exact, _Line, Lhs, Rhs}|Code],
+             ModData, SideEffects, Calls)                                     ->
+  analyze_code([Lhs, Rhs|Code], ModData, SideEffects, Calls);
 analyze_code([{match, _Line, _Lhs, Rhs}|Code], ModData, SideEffects, Calls)   ->
   analyze_code([Rhs|Code], ModData, SideEffects, Calls);
 analyze_code([{nil, _Line}|Code], ModData, SideEffects, Calls)                ->

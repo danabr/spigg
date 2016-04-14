@@ -47,6 +47,8 @@ complex(F, Arg) ->
     #rec{nested=undefined} -> (Arg:dynamic(Res))#rec{nested=Arg};
     #rec{nested=#rec{nested=_}} -> #rec{_='_'};
     #rec{}=R -> (Arg:dynamic(R, #rec.nested))#rec.nested;
+    #{} -> #{a => Arg:dynamic([1,2,3])};
+    Map when is_map(Map)-> Map#{ok := inconsistent};
     $D       -> $E;
     1.0      -> 1.0e2;
     Binary when is_binary(Binary) -> << <<X/integer>> || <<X>> <= Binary, F(X) >>
