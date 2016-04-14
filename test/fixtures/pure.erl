@@ -47,6 +47,7 @@ complex(F, Arg) ->
     #rec{nested=undefined} -> (Arg:dynamic(Res))#rec{nested=Arg};
     #rec{}=R -> (Arg:dynamic(R, #rec.nested))#rec.nested;
     $D       -> $E;
-    1.0      -> 1.0e2
+    1.0      -> 1.0e2;
+    Binary when is_binary(Binary) -> << <<X/integer>> || <<X>> <= Binary, F(X) >>
   end,
   Res = begin 1 + 2 end.
