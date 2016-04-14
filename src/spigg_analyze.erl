@@ -89,14 +89,6 @@ analyze_code([{call, _Line, {'fun', _Line, {clauses, Clauses}}, Args}|Code],
   %% and thus we know that any side effect the fun has, the
   %% calling function also has.
   analyze_code(Clauses ++ Args ++ Code, ModData, SideEffects, Calls);
-analyze_code([ {call, _Line, {remote, _, {atom, _, _Mod}, {var, _, _Fun}}, Args}
-             | Code], ModData, SideEffects, Calls)                            ->
-  % Dynamic call (TODO: Mark functions that make dynamic calls )
-  analyze_code(Args ++ Code, ModData, SideEffects, Calls);
-analyze_code([ {call, _Line, {remote, _, {var, _, _Mod}, {_, _, _Fun}}, Args}
-             | Code], ModData, SideEffects, Calls)                            ->
-  % Dynamic call (TODO: Mark functions that make dynamic calls )
-  analyze_code(Args ++ Code, ModData, SideEffects, Calls);
 analyze_code([ {call, Line, {remote, _, {atom, _, Mod}, {atom, _, Fun}}, Args}
              | Code], ModData, SideEffects, Calls)                            ->
   % Fully qualified function call
@@ -108,9 +100,13 @@ analyze_code([{call, Line, {atom, _, Fun}, Args}|Code],
   Mod = identify_source_module(ModData, Fun, Arity),
   Call = {Line, {Mod, Fun, Arity}},
   analyze_code(Args ++ Code, ModData, SideEffects, [Call|Calls]);
-analyze_code([{call, _Line, {var, _, _Var}, Args}|Code],
+analyze_code([{call, _Line, {remote, _, ModExpr, FunExpr}, Args}|Code],
              ModData, SideEffects, Calls)                                     ->
-  analyze_code(Args ++ Code, ModData, SideEffects, Calls);
+  % Dynamic call (TODO: Mark functions that make dynamic calls )
+  analyze_code([ModExpr, FunExpr|Args] ++ Code, ModData, SideEffects, Calls);
+analyze_code([{call, _Line, Expr, Args}|Code], ModData, SideEffects, Calls)   ->
+  % Dynamic call (TODO: Mark functions that make dynamic calls )
+  analyze_code([Expr|Args] ++ Code, ModData, SideEffects, Calls);
 analyze_code([{'case', _Line, Expr, Clauses}|Code],
              ModData, SideEffects, Calls)                                     ->
   analyze_code([Expr|Clauses] ++ Code, ModData, SideEffects, Calls);
