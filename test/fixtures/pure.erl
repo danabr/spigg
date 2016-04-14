@@ -26,7 +26,8 @@ complex(F, Arg) ->
   Res = (catch F(Arg)),
   try Arg:dynamic() of
     add -> fun ?MODULE:add/2;
-    reverse -> fun reverse/1
+    reverse -> fun reverse/1;
+    F -> resolve:F(Res)
   catch
     _:_ -> error
   after

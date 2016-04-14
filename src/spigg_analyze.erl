@@ -89,6 +89,10 @@ analyze_code([{call, _Line, {'fun', _Line, {clauses, Clauses}}, Args}|Code],
   %% and thus we know that any side effect the fun has, the
   %% calling function also has.
   analyze_code(Clauses ++ Args ++ Code, ModData, SideEffects, Calls);
+analyze_code([ {call, _Line, {remote, _, {atom, _, _Mod}, {var, _, _Fun}}, Args}
+             | Code], ModData, SideEffects, Calls)                            ->
+  % Dynamic call (TODO: Mark functions that make dynamic calls )
+  analyze_code(Args ++ Code, ModData, SideEffects, Calls);
 analyze_code([ {call, _Line, {remote, _, {var, _, _Mod}, {_, _, _Fun}}, Args}
              | Code], ModData, SideEffects, Calls)                            ->
   % Dynamic call (TODO: Mark functions that make dynamic calls )
