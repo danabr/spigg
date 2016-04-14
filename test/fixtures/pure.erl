@@ -44,6 +44,7 @@ complex(F, Arg) ->
     <<>>     -> <<>>;
     <<1,2,3>> -> <<"123">>;
     #rec{}=R -> (Arg:dynamic(R, #rec.nested))#rec.nested;
-    $D       -> $E
+    $D       -> $E;
+    1.0      -> 1.0e2
   end,
   Res = begin 1 + 2 end.

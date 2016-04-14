@@ -125,6 +125,8 @@ analyze_code([{clause, _Line, _Args, _Guards, Code}|Clauses],
 analyze_code([{cons, _Line, HeadExpr, TailExpr}|Code],
              ModData, SideEffects, Calls)                                     ->
   analyze_code([HeadExpr, TailExpr|Code], ModData, SideEffects, Calls);
+analyze_code([{float, _Line, _Val}|Code], ModData, SideEffects, Calls)        ->
+  analyze_code(Code, ModData, SideEffects, Calls);
 %% Note: a fun is only part of the enclosing function if
 %% is called from the function. We can't reliably tell if
 %% that happens with the local view we have.
