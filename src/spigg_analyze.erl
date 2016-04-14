@@ -147,7 +147,7 @@ analyze_code([{op, _, _Op, Lhs, Rhs}|Code],
 analyze_code([{'receive', Line, Clauses}|Code], ModData, SideEffects0, Calls) ->
   SideEffects = [{Line, 'msg_receive'}|SideEffects0],
   analyze_code(Clauses++Code, ModData, SideEffects, Calls);
-analyze_code([{'receive', Line, Clauses, {integer, _, _Tmo}, After}|Code],
+analyze_code([{'receive', Line, Clauses, _Tmo, After}|Code],
              ModData, SideEffects0, Calls)                                    ->
   SideEffects = [{Line, 'msg_receive'}|SideEffects0],
   analyze_code(Clauses++After++Code, ModData, SideEffects, Calls);
