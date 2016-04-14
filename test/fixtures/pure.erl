@@ -44,6 +44,7 @@ complex(F, Arg) ->
     "string" -> "string";
     <<>>     -> <<>>;
     <<1,2,3>> -> <<"123">>;
+    #rec{nested=undefined} -> (Arg:dynamic(Res))#rec{nested=Arg};
     #rec{}=R -> (Arg:dynamic(R, #rec.nested))#rec.nested;
     $D       -> $E;
     1.0      -> 1.0e2

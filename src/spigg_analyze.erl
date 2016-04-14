@@ -168,9 +168,9 @@ analyze_code([{'receive', Line, Clauses, _Tmo, After}|Code],
              ModData, SideEffects0, Calls)                                    ->
   SideEffects = [{Line, 'msg_receive'}|SideEffects0],
   analyze_code(Clauses++After++Code, ModData, SideEffects, Calls);
-analyze_code([{record, _Line, {var, _, _Var}, _Name, Fields}|Code],
+analyze_code([{record, _Line, Expr, _Name, Fields}|Code],
              ModData, SideEffects, Calls)                                     ->
-  analyze_code(Fields++Code, ModData, SideEffects, Calls);
+  analyze_code([Expr|Fields]++Code, ModData, SideEffects, Calls);
 analyze_code([{record, _Line, _Name, Fields}|Code],
              ModData, SideEffects, Calls)                                     ->
   analyze_code(Fields++Code, ModData, SideEffects, Calls);
