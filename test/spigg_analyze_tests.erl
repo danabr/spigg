@@ -33,7 +33,8 @@ analyze_side_effects_test() ->
   {ok, DB} = spigg_analyze:beam("test/ebin/side_effects.beam"),
   assert_side_effects(['msg_receive'], DB, side_effects, ping_pong, 0),
   assert_side_effects(['msg_receive'], DB, side_effects, ping_pong_indirect, 0),
-  assert_side_effects(['msg_receive'], DB, side_effects, timeout, 0).
+  assert_side_effects(['msg_receive'], DB, side_effects, timeout, 0),
+  assert_side_effects(['msg_receive'], DB, side_effects, timeout_indirect, 0).
 
 analyze_self_test() ->
   TestF = fun(Beam, ok) ->

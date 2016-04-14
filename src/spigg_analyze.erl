@@ -95,6 +95,12 @@ analyze_code([{call, _Line, {'fun', _Line, {clauses, Clauses}}, Args}|Code],
   %% and thus we know that any side effect the fun has, the
   %% calling function also has.
   analyze_code(Clauses ++ Args ++ Code, ModData, SideEffects, Calls);
+analyze_code([{call, _Line, {named_fun, _Line, _Name, Clauses}, Args}|Code],
+             ModData, SideEffects, Calls)                                     ->
+  %% In this case a fun is constructed and used immediately,
+  %% and thus we know that any side effect the fun has, the
+  %% calling function also has.
+  analyze_code(Clauses ++ Args ++ Code, ModData, SideEffects, Calls);
 analyze_code([ {call, Line, {remote, _, {atom, _, Mod}, {atom, _, Fun}}, Args}
              | Code], ModData, SideEffects, Calls)                            ->
   % Fully qualified function call
@@ -163,6 +169,9 @@ analyze_code([{map_field_exact, _Line, Lhs, Rhs}|Code],
   analyze_code([Lhs, Rhs|Code], ModData, SideEffects, Calls);
 analyze_code([{match, _Line, _Lhs, Rhs}|Code], ModData, SideEffects, Calls)   ->
   analyze_code([Rhs|Code], ModData, SideEffects, Calls);
+analyze_code([{named_fun, _Line, _Name, _Clauses}|Code],
+             ModData, SideEffects, Calls)                                     ->
+  analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{nil, _Line}|Code], ModData, SideEffects, Calls)                ->
   analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{op, _, _Op, Expr}|Code], ModData, SideEffects0, Calls0)        ->

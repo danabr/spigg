@@ -4,6 +4,7 @@
        , ping_pong_indirect/0
        , timeout/0
        , timeout/1
+       , timeout_indirect/0
        ]).
 
 ping_pong() ->
@@ -28,3 +29,7 @@ timeout(Timeout) ->
   after
     Timeout -> timeout
   end.
+
+timeout_indirect() ->
+  (fun Loop() -> receive x -> Loop() end end)().
+
