@@ -180,9 +180,9 @@ analyze_code([{record, _Line, Expr, _Name, Fields}|Code],
 analyze_code([{record, _Line, _Name, Fields}|Code],
              ModData, SideEffects, Calls)                                     ->
   analyze_code(Fields++Code, ModData, SideEffects, Calls);
-analyze_code([{record_field, _Line, {atom, _Line, _Field}, Rhs}|Code],
+analyze_code([{record_field, _Line, FieldExpr, ValExpr}|Code],
              ModData, SideEffects, Calls)                                     ->
-  analyze_code([Rhs|Code], ModData, SideEffects, Calls);
+  analyze_code([FieldExpr, ValExpr|Code], ModData, SideEffects, Calls);
 analyze_code([ {record_field, _Line, RcrdExpr, _Record, {atom, _Line, _Field}}
                |Code], ModData, SideEffects, Calls)                           ->
   analyze_code([RcrdExpr|Code], ModData, SideEffects, Calls);
