@@ -144,6 +144,13 @@ analyze_code([{op, _, _Op, Lhs, Rhs}|Code],
   {SideEffects2, Calls2} = analyze_code(listify(Rhs), ModData,
                                         SideEffects1, Calls1),
   analyze_code(Code, ModData, SideEffects2, Calls2);
+analyze_code([{'receive', Line, Clauses}|Code], ModData, SideEffects0, Calls) ->
+  SideEffects = [{Line, 'msg_receive'}|SideEffects0],
+  analyze_code(Clauses++Code, ModData, SideEffects, Calls);
+analyze_code([{'receive', Line, Clauses, {integer, _, _Tmo}, After}|Code],
+             ModData, SideEffects0, Calls)                                    ->
+  SideEffects = [{Line, 'msg_receive'}|SideEffects0],
+  analyze_code(Clauses++After++Code, ModData, SideEffects, Calls);
 analyze_code([{record, _Line, {var, _, _Var}, _Name, Fields}|Code],
              ModData, SideEffects, Calls)                                     ->
   analyze_code(Fields++Code, ModData, SideEffects, Calls);
