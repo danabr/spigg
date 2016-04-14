@@ -4,6 +4,8 @@
 
 -compile([export_all]).
 
+-record(rec, { nested :: #rec{} }).
+
 add(A, B) when is_integer(A), is_integer(B) ->
   A + B.
 
@@ -41,6 +43,7 @@ complex(F, Arg) ->
     "string" -> "string";
     <<>>     -> <<>>;
     <<1,2,3>> -> <<"123">>;
+    #rec{}=R -> (Arg:dynamic(R, #rec.nested))#rec.nested;
     $D       -> $E
   end,
   Res = begin 1 + 2 end.

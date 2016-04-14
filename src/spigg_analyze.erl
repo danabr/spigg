@@ -179,8 +179,10 @@ analyze_code([{record, _Line, _Name, Fields}|Code],
 analyze_code([{record_field, _Line, {atom, _Line, _Field}, Rhs}|Code],
              ModData, SideEffects, Calls)                                     ->
   analyze_code([Rhs|Code], ModData, SideEffects, Calls);
-analyze_code([{record_field, _Line, {var, _Line, _Var},
-              _Record, {atom, _Line, _Field}}|Code],
+analyze_code([ {record_field, _Line, RcrdExpr, _Record, {atom, _Line, _Field}}
+               |Code], ModData, SideEffects, Calls)                           ->
+  analyze_code([RcrdExpr|Code], ModData, SideEffects, Calls);
+analyze_code([{record_index, _Line, _Record, {atom, _Line, _Field}}|Code],
              ModData, SideEffects, Calls)                                     ->
   analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{string, _Line, _String}|Code], ModData, SideEffects, Calls)    ->
