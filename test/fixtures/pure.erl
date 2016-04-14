@@ -35,6 +35,7 @@ complex(F, Arg) ->
     Res > 1 -> large;
     true    -> small
   end,
-  case Arg of
+  Res = case Arg of
     "string" -> "string"
-  end.
+  end,
+  Res = begin 1 + 2 end.

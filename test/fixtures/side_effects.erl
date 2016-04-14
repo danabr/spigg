@@ -1,6 +1,7 @@
 -module(side_effects).
 
 -export([ping_pong/0
+       , ping_pong_indirect/0
        , timeout/0
        , timeout/1
        ]).
@@ -10,6 +11,11 @@ ping_pong() ->
   receive
     ping -> pong
   end.
+
+ping_pong_indirect() ->
+  (fun (X) ->
+    receive Y -> X + Y end
+  end)(1).
 
 timeout() ->
   receive
