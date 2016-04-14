@@ -40,6 +40,7 @@ complex(F, Arg) ->
   Res = case Arg of
     "string" -> "string";
     <<>>     -> <<>>;
-    <<1,2,3>> -> <<"123">>
+    <<1,2,3>> -> <<"123">>;
+    $D       -> $E
   end,
   Res = begin 1 + 2 end.
