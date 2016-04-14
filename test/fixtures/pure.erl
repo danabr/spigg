@@ -25,7 +25,8 @@ exists(P, L) when is_function(P, 1), is_list(L) ->
 complex(F, Arg) ->
   Res = (catch F(Arg)),
   try Arg:dynamic() of
-    clause -> ok
+    add -> fun ?MODULE:add/2;
+    reverse -> fun reverse/1
   catch
     _:_ -> error
   after
