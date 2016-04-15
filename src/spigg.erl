@@ -49,18 +49,14 @@ merge(#db{functions=Old}, #db{functions=New}) ->
 new_db() -> #db{}.
 
 -spec side_effects(spigg:db(), mfa()) -> {error, not_found} |
-                                         {ok, {Status, Unknowns}}
-  when Status :: complete | incomplete,
+                                         {ok, {SideEffects, Unknowns}}
+  when SideEffects :: ordsets:ordset(spigg:side_effect()),
        Unknowns :: ordsets:ordset(mfa()).
 %% @doc Lookup side effects of MFA.
 side_effects(#db{functions=Fns}, MFA) ->
   case side_effects(Fns, MFA, [], []) of
-    {[], _}=Res        ->
-      case maps:is_key(MFA, Fns) of
-        false -> {error, not_found};
-        true  -> {ok, Res}
-      end;
-    {_, _}=Res -> {ok, Res}
+    {[], [MFA]} -> {error, not_found};
+    {_, _}=Res  -> {ok, Res}
   end.
 
 side_effects(Fns, MFA, Unknowns, Seen) ->
