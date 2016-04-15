@@ -145,6 +145,10 @@ analyze_code([{'fun', Line,
              ModData, SideEffects, Calls)                                     ->
   Call = {Line, {M, F, A}},
   analyze_code(Code, ModData, SideEffects, [Call|Calls]);
+analyze_code([{'fun', _Line, {function, _M, _F, _A}}|Code],
+             ModData, SideEffects, Calls)                                     ->
+  %% Dynamic fun reference.
+  analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{'if', _Line, Clauses}|Code], ModData, SideEffects, Calls)      ->
   analyze_code(Clauses ++ Code, ModData, SideEffects, Calls);
 analyze_code([{integer, _Line, _Val}|Code], ModData, SideEffects, Calls)      ->

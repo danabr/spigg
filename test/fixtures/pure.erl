@@ -30,6 +30,7 @@ complex(F, Arg) ->
   try Arg:dynamic() of
     add -> fun ?MODULE:add/2;
     reverse -> fun reverse/1;
+    dynamic_fun_reference -> fun Arg:F/3;
     F -> resolve:F(Res)
   catch
     _:_ -> error
