@@ -3,6 +3,7 @@
 -export([ping_pong/0
        , ping_pong_indirect/0
        , timeout/0
+       , timeout_fun/0
        , timeout/1
        , timeout_indirect/0
        ]).
@@ -24,6 +25,9 @@ timeout() ->
     1000 -> timeout
   end.
 
+timeout_fun() ->
+  fun timeout/0.
+
 timeout(Timeout) ->
   receive
   after
@@ -31,5 +35,5 @@ timeout(Timeout) ->
   end.
 
 timeout_indirect() ->
-  (fun Loop() -> receive x -> Loop() end end)().
+  fun Loop() -> receive x -> Loop() end end.
 

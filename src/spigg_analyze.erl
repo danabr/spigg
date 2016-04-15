@@ -20,7 +20,10 @@
 %% e.g. a function may be pure in itself, if the fun(s) passed
 %% to it is pure. Also, a function may construct a fun with a
 %% side effect and just return it.
-%% A: Dodge the question for now.
+%% A: Spigg tracks the introduction of side effects, which may
+%% may not be the same place as side effects are executed.
+%% Thus, referring to fun erlang:spawn/1 is the same as introducing
+%% the "spawn" side effect.
 
 -record(mod_data, { name = undefined :: module()
                   , imports = #{} :: #{{atom(), arity()} => module()}
@@ -91,15 +94,9 @@ analyze_code([{block, _Line, SubCode}|Code], ModData, SideEffects, Calls)     ->
   analyze_code(SubCode ++ Code, ModData, SideEffects, Calls);
 analyze_code([{call, _Line, {'fun', _Line, {clauses, Clauses}}, Args}|Code],
              ModData, SideEffects, Calls)                                     ->
-  %% In this case a fun is constructed and used immediately,
-  %% and thus we know that any side effect the fun has, the
-  %% calling function also has.
   analyze_code(Clauses ++ Args ++ Code, ModData, SideEffects, Calls);
 analyze_code([{call, _Line, {named_fun, _Line, _Name, Clauses}, Args}|Code],
              ModData, SideEffects, Calls)                                     ->
-  %% In this case a fun is constructed and used immediately,
-  %% and thus we know that any side effect the fun has, the
-  %% calling function also has.
   analyze_code(Clauses ++ Args ++ Code, ModData, SideEffects, Calls);
 analyze_code([ {call, Line, {remote, _, {atom, _, Mod}, {atom, _, Fun}}, Args}
              | Code], ModData, SideEffects, Calls)                            ->
@@ -135,18 +132,19 @@ analyze_code([{cons, _Line, HeadExpr, TailExpr}|Code],
   analyze_code([HeadExpr, TailExpr|Code], ModData, SideEffects, Calls);
 analyze_code([{float, _Line, _Val}|Code], ModData, SideEffects, Calls)        ->
   analyze_code(Code, ModData, SideEffects, Calls);
-%% Note: a fun is only part of the enclosing function if
-%% is called from the function. We can't reliably tell if
-%% that happens with the local view we have.
-analyze_code([{'fun', _Line, {clauses, _Clauses}}|Code],
+analyze_code([{'fun', _Line, {clauses, Clauses}}|Code],
              ModData, SideEffects, Calls)                                     ->
-  analyze_code(Code, ModData, SideEffects, Calls);
-analyze_code([{'fun', _Line, {function, _F, _A}}|Code],
+  analyze_code(Clauses ++ Code, ModData, SideEffects, Calls);
+analyze_code([{'fun', Line, {function, Fun, Arity}}|Code],
              ModData, SideEffects, Calls)                                     ->
-  analyze_code(Code, ModData, SideEffects, Calls);
-analyze_code([{'fun', _Line, {function, _M, _F, _A}}|Code],
+  Mod = identify_source_module(ModData, Fun, Arity),
+  Call = {Line, {Mod, Fun, Arity}},
+  analyze_code(Code, ModData, SideEffects, [Call|Calls]);
+analyze_code([{'fun', Line,
+               {function, {atom, _, M}, {atom, _, F}, {integer, _, A}}}|Code],
              ModData, SideEffects, Calls)                                     ->
-  analyze_code(Code, ModData, SideEffects, Calls);
+  Call = {Line, {M, F, A}},
+  analyze_code(Code, ModData, SideEffects, [Call|Calls]);
 analyze_code([{'if', _Line, Clauses}|Code], ModData, SideEffects, Calls)      ->
   analyze_code(Clauses ++ Code, ModData, SideEffects, Calls);
 analyze_code([{integer, _Line, _Val}|Code], ModData, SideEffects, Calls)      ->
@@ -169,9 +167,9 @@ analyze_code([{map_field_exact, _Line, Lhs, Rhs}|Code],
   analyze_code([Lhs, Rhs|Code], ModData, SideEffects, Calls);
 analyze_code([{match, _Line, _Lhs, Rhs}|Code], ModData, SideEffects, Calls)   ->
   analyze_code([Rhs|Code], ModData, SideEffects, Calls);
-analyze_code([{named_fun, _Line, _Name, _Clauses}|Code],
+analyze_code([{named_fun, _Line, _Name, Clauses}|Code],
              ModData, SideEffects, Calls)                                     ->
-  analyze_code(Code, ModData, SideEffects, Calls);
+  analyze_code(Clauses ++ Code, ModData, SideEffects, Calls);
 analyze_code([{nil, _Line}|Code], ModData, SideEffects, Calls)                ->
   analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{op, _, _Op, Expr}|Code], ModData, SideEffects0, Calls0)        ->
