@@ -39,7 +39,6 @@ analyze_side_effects_test() ->
 
 analyze_self_test() ->
   TestF = fun(Beam, ok) ->
-    ?debugFmt("analyze_self_test: ~p", [Beam]),
     ?assertMatch({ok, _}, spigg_analyze:beam(Beam))
   end,
   filelib:fold_files("ebin", ".beam", false, TestF, ok).
