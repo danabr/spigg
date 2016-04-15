@@ -37,6 +37,13 @@ analyze_side_effects_test() ->
   assert_side_effects(['msg_receive'], DB, side_effects, timeout, 0),
   assert_side_effects(['msg_receive'], DB, side_effects, timeout_indirect, 0).
 
+analyze_side_effects_order_test() ->
+  {ok, #db{functions=Funs}} = spigg_analyze:beam("test/ebin/side_effects.beam"),
+  MFA = {side_effects, side_effect_order, 0},
+  #function{native_side_effects=Effects} = maps:get(MFA, Funs),
+  Expected = [{13, msg_receive}, {15, msg_receive}],
+  ?assertEqual(Expected, Effects).
+
 analyze_self_test() ->
   TestF = fun(Beam, ok) ->
     ?assertMatch({ok, _}, spigg_analyze:beam(Beam))
@@ -47,7 +54,7 @@ analyze_self_test() ->
 assert_side_effects(Expected, #db{functions=Funs}, M, F, A) ->
   #function{native_side_effects=Effects} = maps:get({M, F, A}, Funs),
   E = [Type || {_Line, Type} <- Effects],
-  ?assertEqual(lists:sort(Expected), lists:sort(E)).
+  ?assertEqual(lists:sort(Expected), E).
 
 assert_calls(Expected, #db{functions=Funs}, M, F, A) ->
   #function{calls=Calls} = maps:get({M, F, A}, Funs),

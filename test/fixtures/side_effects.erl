@@ -6,7 +6,16 @@
        , timeout_fun/0
        , timeout/1
        , timeout_indirect/0
+       , side_effect_order/0
        ]).
+
+side_effect_order() ->
+  receive
+    one ->
+      receive
+        two -> ok
+      end
+    end.
 
 ping_pong() ->
   self() ! ping,
@@ -36,4 +45,3 @@ timeout(Timeout) ->
 
 timeout_indirect() ->
   fun Loop() -> receive x -> Loop() end end.
-
