@@ -1,13 +1,23 @@
-Spigg - side effect analysis of Erlang source code.
+spigg - (co-)effect analysis of Erlang source code.
 
-Work in progress. Nothing useful here yet. Move on.
+spigg is a minimal library analyzing BEAM files for effects/coeffects. spigg
+does this by building a database of all calls made from all analyzed functions,
+and by recording the native effects of each call. Note that the only "native"
+effect recognized by spigg is erlang message receival. All other effects/coeffects
+can be detected from mere function calls.
 
-# Design ideas
-{ok, DB} = spigg_db:load("test.spigg").
-{ok, []} = spigg:side_effects(DB, test, foo, 2).
-{ok, [send, receive, ref]} = spigg:side_effects(DB, test, bar, 0).
-{error, not_found} = spigg:side_effects(DB, other, module, 4).
+spigg has only been used for experimentation. The author has not concluded whether
+it is useful in practice or not.
 
-{ok, [ {local, "test.erl", 54} ] = spigg:origins(DB, test, bar, 0, receive).
+TODO: Track dynamic calls
+It would be nice if spigg reported dynamic calls, such as Mod:F(Arg), since
+the existence of such calls makes the analysis incomplete.
 
-
+Example usage:
+$ erl -pa ebin
+1> {ok, DB} = spigg_analyze:beam("test/ebin/side_effects.beam").
+2> {ok, {SideEffects, Unknowns}} = spigg:side_effects(DB, {side_effects, ping_pong, 0}).
+3> SideEffects.
+[{22,local,msg_receive}]
+4> Unknowns.
+[{erlang,self,0}]
