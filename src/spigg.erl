@@ -54,28 +54,47 @@ new_db() -> #db{}.
        Unknowns :: ordsets:ordset(mfa()).
 %% @doc Lookup side effects of MFA.
 side_effects(#db{functions=Fns}, MFA) ->
-  case side_effects(Fns, MFA, [], []) of
-    {[], [MFA]} -> {error, not_found};
-    {_, _}=Res  -> {ok, Res}
+  case side_effects(Fns, MFA, [], #{}) of
+    {[], [MFA], _}                 -> {error, not_found};
+    {SideEffects, Unknown, _Seen}  -> {ok, {SideEffects, Unknown}}
   end.
 
+%% Memoized version. Rewrite for clarity!
+%% Fns :: Our knowledge of the world
+%% MFA :: The MFA we are analyzing
+%% Unknowns :: Unknown MFAs so far
+%% Seen :: MFAs we have already calculated the side effects for
 side_effects(Fns, MFA, Unknowns, Seen) ->
-  case ordsets:is_element(MFA, Seen) of
-    true  -> {[], Unknowns};
-    false ->
+  case maps:find(MFA, Seen) of
+    {ok, SideEffects}  ->
+      {SideEffects, Unknowns, Seen};
+    error              ->
       case maps:find(MFA, Fns) of
-        error                                               ->
-          {[], ordsets:add_element(MFA, Unknowns)};
-        {ok, #function{calls=Calls, native_side_effects=S}} ->
-          SideEffects = lists:map(fun({Line, Effect}) -> {Line, local, Effect} end,
-                                  S),
-          Seen1 = ordsets:add_element(MFA, Seen),
-          lists:foldl(fun({Line, RMFA}, {S0, U0}) ->
-            {S1, U1} = side_effects(Fns, RMFA, U0, Seen1),
-            S2 = lists:foldl(fun({_, _, E}, SX) ->
-              ordsets:add_element({Line, RMFA, E}, SX)
-            end, S0, S1),
-            {S2, U1}
-          end, {SideEffects, Unknowns}, Calls)
+        error    -> {[], ordsets:add_element(MFA, Unknowns), Seen};
+        {ok, Fn} -> calculate_side_effects(Fns, MFA, Unknowns, Seen, Fn)
       end
   end.
+
+calculate_side_effects(Fns, MFA, Unknowns0, Seen0, #function{calls=Calls}=F) ->
+  LocalSideEffects = local_side_effects(F),
+  SeenSelf = maps:put(MFA, LocalSideEffects, Seen0),
+  {AllSideEffects, Unknown, Seen} =
+    add_side_effects_from_calls(Fns, Unknowns0, SeenSelf, LocalSideEffects,
+                                Calls),
+  {AllSideEffects, Unknown, maps:put(MFA, AllSideEffects, Seen)}.
+
+local_side_effects(#function{native_side_effects=S}) ->
+  lists:map(fun({Line, Effect}) -> {Line, local, Effect} end, S).
+
+add_side_effects_from_calls(_Fns, Unknowns, Seen, SideEffects, []) ->
+  {SideEffects, Unknowns, Seen};
+add_side_effects_from_calls(Fns, Unknowns0, Seen0, SideEffects0,
+                            [{Line, MFA}|Calls])                   ->
+  {CallSideEffects, Unknowns, Seen} = side_effects(Fns, MFA, Unknowns0, Seen0),
+  SideEffects = add_side_effects(Line, MFA, SideEffects0, CallSideEffects),
+  add_side_effects_from_calls(Fns, Unknowns, Seen, SideEffects, Calls).
+
+add_side_effects(Line, MFA, OldSideEffects, NewSideEffects) ->
+  lists:foldl(fun({_, _, Effect}, CurrentSideEffects) ->
+    ordsets:add_element({Line, MFA, Effect}, CurrentSideEffects)
+  end, OldSideEffects, NewSideEffects).

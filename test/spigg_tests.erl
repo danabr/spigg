@@ -99,7 +99,7 @@ mutual_recursion_side_effect_test() ->
   DB2 = spigg:add_function(DB1, Odd, [{2, Even}], [{1, time}]),
   ?assertEqual({ok, {[{1, Odd, time}], []}},
                spigg:side_effects(DB2, Even)),
-  ?assertEqual({ok, {[{1, local, time}], []}},
+  ?assertEqual({ok, {[{1, local, time}, {2, Even, time}], []}},
                spigg:side_effects(DB2, Odd)).
 
 multipe_calls_side_effect_test() ->
