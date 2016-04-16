@@ -18,14 +18,14 @@ compile: ${BEAMS}
 clean:
 	rm ebin/*.beam test/ebin/*.beam
 
-ebin/%.beam: src/%.erl src/*.hrl
-	erlc +debug_info -Werror -o ebin $<
+ebin/%.beam: src/%.erl include/*.hrl
+	erlc +debug_info -Werror -I include -o ebin $<
 
-test/ebin/%.beam: test/%.erl src/*.hrl
-	erlc +debug_info -Werror -I src/ -o test/ebin $<
+test/ebin/%.beam: test/%.erl include/*.hrl
+	erlc +debug_info -Werror -I include/ -o test/ebin $<
 
 test/ebin/%.beam: test/fixtures/%.erl
-	erlc +debug_info -Werror -I src/ -o test/ebin $<
+	erlc +debug_info -Werror -I include/ -o test/ebin $<
 
 eunit: compile ${TEST_BEAMS} ${TEST_FIXTURE_BEAMS}
 	@ ./run_tests test/*.erl
