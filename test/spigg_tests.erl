@@ -17,7 +17,7 @@ simple_side_effect_test() ->
   DB0 = spigg:new_db(),
   SideEffects = [{14, 'send'}],
   DB1 = spigg:add_function(DB0, MFA, [], SideEffects),
-  Expected = [{14, local, 'send'}],
+  Expected = [{14, [], 'send'}],
   ?assertEqual({ok, {Expected, []}}, spigg:side_effects(DB1, MFA)).
 
 no_side_effect_recursion_test() ->
@@ -41,7 +41,7 @@ unknown_side_effect_test() ->
   Calls = [{12, {bar, baz, 2}}],
   SideEffects = [{14, 'send'}],
   DB1 = spigg:add_function(DB0, MFA, Calls, SideEffects),
-  ExpectedSEs = [{14, local, 'send'}],
+  ExpectedSEs = [{14, [], 'send'}],
   Unknowns = [{bar, baz, 2}],
   ?assertEqual({ok, {ExpectedSEs, Unknowns}}, spigg:side_effects(DB1, MFA)).
 
@@ -73,7 +73,7 @@ two_level_side_effect_test() ->
   SideEffects = [{14, 'send'}],
   DB1 = spigg:add_function(DB0, MFA, Calls, SideEffects),
   DB2 = spigg:add_function(DB1, RemoteMFA, [], [{95, 'receive'}]),
-  Expected = [{12, RemoteMFA, 'receive'}, {14, local, 'send'}],
+  Expected = [{12, [RemoteMFA], 'receive'}, {14, [], 'send'}],
   ?assertEqual({ok, {Expected, []}}, spigg:side_effects(DB2, MFA)).
 
 three_level_side_effect_test() ->
@@ -85,9 +85,9 @@ three_level_side_effect_test() ->
   DB1 = spigg:add_function(DB0, MFA, [{12, RemoteMFA}], SideEffects),
   DB2 = spigg:add_function(DB1, RemoteMFA, [{8,DeepMFA}], [{95, 'receive'}]),
   DB3 = spigg:add_function(DB2, DeepMFA, [], [{4, 'time'}]),
-  Expected = [ {12, RemoteMFA, 'receive'}
-             , {12, RemoteMFA, 'time'}
-             , {14, local, 'send'}
+  Expected = [ {12, [RemoteMFA], 'receive'}
+             , {12, [RemoteMFA, DeepMFA], 'time'}
+             , {14, [], 'send'}
              ],
   ?assertEqual({ok, {Expected, []}}, spigg:side_effects(DB3, MFA)).
 
@@ -97,9 +97,9 @@ mutual_recursion_side_effect_test() ->
   DB0 = spigg:new_db(),
   DB1 = spigg:add_function(DB0, Even, [{1, Odd}], []),
   DB2 = spigg:add_function(DB1, Odd, [{2, Even}], [{1, time}]),
-  ?assertEqual({ok, {[{1, Odd, time}], []}},
+  ?assertEqual({ok, {[{1, [Odd], time}], []}},
                spigg:side_effects(DB2, Even)),
-  ?assertEqual({ok, {[{1, local, time}, {2, Even, time}], []}},
+  ?assertEqual({ok, {[{1, [], time}, {2, [Even, Odd], time}], []}},
                spigg:side_effects(DB2, Odd)).
 
 multipe_calls_side_effect_test() ->
@@ -108,7 +108,7 @@ multipe_calls_side_effect_test() ->
   DB0 = spigg:new_db(),
   DB1 = spigg:add_function(DB0, Caller, [{1, Callee}, {2, Callee}], []),
   DB2 = spigg:add_function(DB1, Callee, [], [{1, time}]),
-  ?assertEqual({ok, {[{1, Callee, time}, {2, Callee, time}], []}},
+  ?assertEqual({ok, {[{1, [Callee], time}, {2, [Callee], time}], []}},
                spigg:side_effects(DB2, Caller)).
 
 multiple_deep_calls_side_effect_test() ->
@@ -120,9 +120,9 @@ multiple_deep_calls_side_effect_test() ->
                            []),
   DB2 = spigg:add_function(DB1, Caller, [{1, Callee}, {2, Callee}], []),
   DB3 = spigg:add_function(DB2, Callee, [], [{1, time}]),
-  ?assertEqual({ok, {[ {1, Caller, time}
-                     , {2, Callee, time}
-                     , {3, Caller, time}
+  ?assertEqual({ok, {[ {1, [Caller, Callee], time}
+                     , {2, [Callee], time}
+                     , {3, [Caller, Callee], time}
                      ], []}},
                spigg:side_effects(DB3, Top)).
 

@@ -18,7 +18,7 @@
 
 -type native_side_effect() :: {line(), spigg:side_effect_type()}.
 
--type side_effect() :: {line(), local|mfa(), spigg:side_effect_type()}.
+-type side_effect() :: {line(), Trace::[mfa()], spigg:side_effect_type()}.
 
 -type side_effect_type() :: 'send'.
 
@@ -59,7 +59,6 @@ side_effects(#db{functions=Fns}, MFA) ->
     {SideEffects, Unknown, _Seen}  -> {ok, {SideEffects, Unknown}}
   end.
 
-%% Memoized version. Rewrite for clarity!
 %% Fns :: Our knowledge of the world
 %% MFA :: The MFA we are analyzing
 %% Unknowns :: Unknown MFAs so far
@@ -84,7 +83,7 @@ calculate_side_effects(Fns, MFA, Unknowns0, Seen0, #function{calls=Calls}=F) ->
   {AllSideEffects, Unknown, maps:put(MFA, AllSideEffects, Seen)}.
 
 local_side_effects(#function{native_side_effects=S}) ->
-  lists:map(fun({Line, Effect}) -> {Line, local, Effect} end, S).
+  lists:map(fun({Line, Effect}) -> {Line, [], Effect} end, S).
 
 add_side_effects_from_calls(_Fns, Unknowns, Seen, SideEffects, []) ->
   {SideEffects, Unknowns, Seen};
@@ -95,6 +94,6 @@ add_side_effects_from_calls(Fns, Unknowns0, Seen0, SideEffects0,
   add_side_effects_from_calls(Fns, Unknowns, Seen, SideEffects, Calls).
 
 add_side_effects(Line, MFA, OldSideEffects, NewSideEffects) ->
-  lists:foldl(fun({_, _, Effect}, CurrentSideEffects) ->
-    ordsets:add_element({Line, MFA, Effect}, CurrentSideEffects)
+  lists:foldl(fun({_, MFAs, Effect}, CurrentSideEffects) ->
+    ordsets:add_element({Line, [MFA|MFAs], Effect}, CurrentSideEffects)
   end, OldSideEffects, NewSideEffects).
