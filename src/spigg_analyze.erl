@@ -109,12 +109,14 @@ analyze_code([{call, Line, {atom, _, Fun}, Args}|Code],
   Mod = identify_source_module(ModData, Fun, Arity),
   Call = {Line, {Mod, Fun, Arity}},
   analyze_code(Args ++ Code, ModData, SideEffects, [Call|Calls]);
-analyze_code([{call, _Line, {remote, _, ModExpr, FunExpr}, Args}|Code],
+analyze_code([{call, Line, {remote, _, ModExpr, FunExpr}, Args}|Code],
              ModData, SideEffects, Calls)                                     ->
-  % Dynamic call (TODO: Mark functions that make dynamic calls )
-  analyze_code([ModExpr, FunExpr|Args] ++ Code, ModData, SideEffects, Calls);
+  % Dynamic call
+  Call = {Line, {erlang, apply, 3}},
+  analyze_code([ModExpr, FunExpr|Args] ++ Code, ModData, SideEffects,
+               [Call|Calls]);
 analyze_code([{call, _Line, Expr, Args}|Code], ModData, SideEffects, Calls)   ->
-  % Dynamic call (TODO: Mark functions that make dynamic calls )
+  % Fun call
   analyze_code([Expr|Args] ++ Code, ModData, SideEffects, Calls);
 analyze_code([{'case', _Line, Expr, Clauses}|Code],
              ModData, SideEffects, Calls)                                     ->
@@ -147,7 +149,9 @@ analyze_code([{'fun', Line,
   analyze_code(Code, ModData, SideEffects, [Call|Calls]);
 analyze_code([{'fun', _Line, {function, _M, _F, _A}}|Code],
              ModData, SideEffects, Calls)                                     ->
-  %% Dynamic fun reference.
+  %% Dynamic fun reference. This is a blind spot in our current
+  %% implementation, since creating a dynamic fun is not the same
+  %% as calling erlang:apply/3.
   analyze_code(Code, ModData, SideEffects, Calls);
 analyze_code([{'if', _Line, Clauses}|Code], ModData, SideEffects, Calls)      ->
   analyze_code(Clauses ++ Code, ModData, SideEffects, Calls);

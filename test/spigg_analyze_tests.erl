@@ -28,7 +28,17 @@ analyze_pure_test() ->
   assert_side_effects([], DB, pure, complex, 2),
   assert_calls([{pure, add, 2}, {pure, reverse, 1}],
                DB, pure, complex, 2),
-  assert_num_functions(7, DB).
+  assert_side_effects([], DB, pure, erlang_apply, 3),
+  assert_calls([{erlang, apply, 3}], DB, pure, erlang_apply, 3),
+  assert_side_effects([], DB, pure, imported_apply, 3),
+  assert_calls([{erlang, apply, 3}], DB, pure, imported_apply, 3),
+  assert_side_effects([], DB, pure, dynamic_mod, 2),
+  assert_calls([{erlang, apply, 3}], DB, pure, dynamic_mod, 2),
+  assert_side_effects([], DB, pure, dynamic_function, 2),
+  assert_calls([{erlang, apply, 3}], DB, pure, dynamic_function, 2),
+  assert_side_effects([], DB, pure, dynamic_all, 3),
+  assert_calls([{erlang, apply, 3}], DB, pure, dynamic_all, 3),
+  assert_num_functions(12, DB).
 
 analyze_side_effects_test() ->
   {ok, DB} = spigg_analyze:beam("test/ebin/side_effects.beam"),

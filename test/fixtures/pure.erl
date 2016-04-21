@@ -24,14 +24,27 @@ sum([X|Rest]) -> X + sum(Rest).
 exists(P, L) when is_function(P, 1), is_list(L) ->
   any(P, L).
 
+erlang_apply(M, F, Args) ->
+  erlang:apply(M, F, Args).
+
+imported_apply(M, F,Args) ->
+  apply(M, F, Args).
+
+dynamic_mod(M, Arg) ->
+  M:function(Arg).
+
+dynamic_function(F, Arg) ->
+  mod:F(Arg).
+
+dynamic_all(M, F, Arg) ->
+  M:F(Arg).
+
 complex(F, Arg) ->
   Res = (catch F(Arg)),
-  ((Arg:module_for(Res)):fun_for(Res))(1,2),
-  try Arg:dynamic() of
+  try F of
     add -> fun ?MODULE:add/2;
     reverse -> fun reverse/1;
-    dynamic_fun_reference -> fun Arg:F/3;
-    F -> resolve:F(Res)
+    dynamic_fun_reference -> fun Arg:F/3
   catch
     _:_ -> error
   after
@@ -45,10 +58,10 @@ complex(F, Arg) ->
     "string" -> "string";
     <<>>     -> <<>>;
     <<1,2,3>> -> <<"123">>;
-    #rec{nested=undefined} -> (Arg:dynamic(Res))#rec{nested=Arg};
+    #rec{nested=undefined} -> (F(Res))#rec{nested=Arg};
     #rec{nested=#rec{nested=_}} -> #rec{_='_'};
-    #rec{}=R -> (Arg:dynamic(R, #rec.nested))#rec.nested;
-    #{} -> #{a => Arg:dynamic([1,2,3])};
+    #rec{}=R -> (F(R, #rec.nested))#rec.nested;
+    #{} -> #{a => F([1,2,3])};
     Map when is_map(Map)-> Map#{ok := inconsistent};
     $D       -> $E;
     1.0      -> 1.0e2;
